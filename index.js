@@ -6,6 +6,11 @@ const app = express();
 
 const path = require("path");
 
+const methodOverride = require("method-override");
+
+app.use(express.urlencoded({ extended: true }));
+app.use(methodOverride("_method"));
+
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
@@ -106,6 +111,7 @@ app.get("/", (req, res) => {
   }
 });
 
+//show route
 app.get("/users", (req, res) => {
   let q = "select * from users";
 
@@ -119,6 +125,52 @@ app.get("/users", (req, res) => {
     res.send("Error occurred:" + err.message);
   }
 });
+
+//edit route
+app.get("/user/:id/edit", (req, res) => {
+  let { id } = req.params;
+  let q = `select * from users where id = '${id}'`;
+
+  try {
+    connection.query(q, (err, user) => {
+      if (err) throw err;
+      res.render("edit", { user: user[0] });
+    });
+  } catch (err) {
+    console.log("Error occured:", err.message);
+    res.send("Error occured:" + err.message);
+  }
+});
+
+//update route
+app.patch("/user/:id", (req, res) => {
+  let { id } = req.params;
+  let { username: newUsername, password: formPassword } = req.body;
+  let q = `select * from users where id = '${id}'`;
+
+  try {
+    connection.query(q, (err, users) => {
+      if (err) throw err;
+      let user = users[0];
+      if (formPassword == user.password) {
+        let updateq = `update users set username = '${newUsername}' where id = '${id}'`;
+        connection.query(updateq, (err, results) => {
+          if (err) throw err;
+          res.redirect("/users");
+        });
+      } else {
+        res.send("Password incorrect. Cannot update username.");
+      }
+    });
+  } catch (err) {
+    console.log("Error occured:", err.message);
+    res.send("Error occured:" + err.message);
+  }
+});
+
+// app.post("/user/:id", (req, res) => {
+//   res.send("POST received — method override might not be kicking in.");
+// });
 
 app.listen("8080", () => {
   console.log("Server is running on port 8080");
